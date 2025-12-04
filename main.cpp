@@ -10,6 +10,13 @@
 #include "triangulo.h"
 
 #define MAX_OBJS 100
+#define LARGURA 80
+#define ALTURA 24
+
+struct Velocidade {
+    int vx;
+    int vy;
+};
 
 #ifdef _WIN32
     // detectar mouse windows
@@ -128,7 +135,40 @@
     }
 #endif
 
+void mover_figura(Figura* f, Velocidade &v) {
+    if (!f) return;
 
+    //Pega posição atual usando os métodos originais
+    int x = f->get_x();
+    int y = f->get_y();
+
+    // Aplica a velocidade externa
+    x += v.vx;
+    y += v.vy;
+
+    //Colisão com as bordas (Lógica de Rebote)
+    
+    // Eixo X
+    if (x >= LARGURA) {
+        x = LARGURA;
+        v.vx = -v.vx; // Inverte velocidade no struct auxiliar
+    } else if (x <= 1) {
+        x = 1;
+        v.vx = -v.vx;
+    }
+
+    // Eixo Y
+    if (y >= ALTURA) {
+        y = ALTURA;
+        v.vy = -v.vy;
+    } else if (y <= 1) {
+        y = 1;
+        v.vy = -v.vy;
+    }
+
+    // 4. Devolve a nova posição para o objeto
+    f->set_posicao(x, y);
+}
 
 
 
@@ -140,6 +180,8 @@ int main(int argc, char *argv[])
     // dados do vetor mãe
     Figura *ptr[MAX_OBJS];
     int size = 0;
+
+    Velocidade vels[MAX_OBJS];
 
     // teste de sudo
     int fd = open_mouse();
@@ -155,30 +197,59 @@ int main(int argc, char *argv[])
     // main loop do jogo
     while (!end)
     {
-        m_output = detect_mouse(fd);
-        if (m_output)
+        std::cout << "\033[2J\033[H";
+        
+        if (detect_mouse(fd))
         {
-            if ((rand() % 2) % 2 == 0)
-                ptr[size] = new Circulo;
-            else
-                ptr[size] = new Triangulo;
-            size++;
-            std::cout << size << std::endl;
+            if (size < MAX_OBJS)
+            {
+                // Posição inicial aleatória
+                int startX = (rand() % (LARGURA - 2)) + 2;
+                int startY = (rand() % (ALTURA - 2)) + 2;
+
+                // Cria a Figura
+                if ((rand() % 2) == 0)
+                    ptr[size] = new Circulo(startX, startY);
+                else
+                    ptr[size] = new Triangulo(startX, startY);
+
+                // Define a Velocidade no array paralelo
+                // (gera 1 ou -1 aleatoriamente)
+                vels[size].vx = (rand() % 2 == 0) ? 1 : -1; 
+                vels[size].vy = (rand() % 2 == 0) ? 1 : -1;
+
+                size++;
+            }
         }
 
+        // 3. Atualiza e Desenha
         for (int i = 0; i < size; i++)
         {
+            // A. Move (altera os dados de posição e velocidade)
+            mover_figura(ptr[i], vels[i]);
+
+            // B. Posiciona o Cursor (TRUQUE PRINCIPAL)
+            // Como não alteramos 'desenhar()', ele não sabe ir para a posição X,Y.
+            // O main tem que colocar o cursor lá antes de chamar o desenhar.
+            std::cout << "\033[" << ptr[i]->get_y() << ";" << ptr[i]->get_x() << "H";
+
+            // C. Desenha (Imprime "o" ou "A" onde o cursor estiver)
             ptr[i]->desenhar();
         }
-        std::cout << std::endl;
 
-        // controla o fps do programa (100000 == 100ms de atraso)
-        global_sleep(100000);
+        // Força o output a aparecer
+        std::cout << std::flush;
+
+        // Delay para animação fluida (50ms)
+        global_sleep(50000);
     }
     
     close_mouse(fd);
+    std::cout << "\033[?25h"; // Restaura cursor
+    
+    // Limpeza de memória
+    for(int i=0; i<size; i++) delete ptr[i];
+
+    return 0;
 }
-
-
-
 
