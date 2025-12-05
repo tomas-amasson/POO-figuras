@@ -1,3 +1,23 @@
+/*
+INTEGRANTES:
+
+TOMAS AMARANTE MASSON
+MARCELO HENRIQUE MARTINS CUNHA BARBOSA
+ALEX SASAKI
+DANILO MAGALHÃES VALOIS
+
+INSTRUÇÕES:
+
+use um mouse (de preferência) para facilitar a identificação do driver.
+Cique para gerar objetos, no máximo 100.
+
+
+*/
+
+
+
+
+
 #include <iostream>
 
 // rand
@@ -8,6 +28,7 @@
 // classes herdadadas (figura implicito)
 #include "circulo.h"
 #include "triangulo.h"
+#include "quadrado.h"
 
 #define MAX_OBJS 100
 #define LARGURA 80
@@ -170,7 +191,22 @@ void mover_figura(Figura* f, Velocidade &v) {
     f->set_posicao(x, y);
 }
 
+void DisplayRefresh(Figura* figs[], int qtd) {
+    // 1. Limpa a tela (ANSI escape code)
+    std::cout << "\033[2J\033[H"; 
 
+    // 2. Percorre e desenha usando Polimorfismo
+    for (int i = 0; i < qtd; i++) {
+        if (figs[i] != nullptr) {
+            // Posiciona o cursor (você pode encapsular isso na classe ou fazer aqui)
+            std::cout << "\033[" << figs[i]->get_y() << ";" << figs[i]->get_x() << "H";
+            figs[i]->desenhar(); // Chamada polimórfica
+        }
+    }
+    
+    // Força o output
+    std::cout << std::flush;
+}
 
 int main(int argc, char *argv[])
 {
@@ -197,7 +233,7 @@ int main(int argc, char *argv[])
     // main loop do jogo
     while (!end)
     {
-        std::cout << "\033[2J\033[H";
+        
         
         if (detect_mouse(fd))
         {
@@ -208,10 +244,13 @@ int main(int argc, char *argv[])
                 int startY = (rand() % (ALTURA - 2)) + 2;
 
                 // Cria a Figura
-                if ((rand() % 2) == 0)
+                int rn = rand() % 3;
+                if (rn == 0)
                     ptr[size] = new Circulo(startX, startY);
-                else
+                else if (rn == 1)
                     ptr[size] = new Triangulo(startX, startY);
+                else 
+                    ptr[size] = new Quadrado(startX, startY);
 
                 // Define a Velocidade no array paralelo
                 // (gera 1 ou -1 aleatoriamente)
@@ -225,17 +264,10 @@ int main(int argc, char *argv[])
         // 3. Atualiza e Desenha
         for (int i = 0; i < size; i++)
         {
-            // A. Move (altera os dados de posição e velocidade)
             mover_figura(ptr[i], vels[i]);
-
-            // B. Posiciona o Cursor (TRUQUE PRINCIPAL)
-            // Como não alteramos 'desenhar()', ele não sabe ir para a posição X,Y.
-            // O main tem que colocar o cursor lá antes de chamar o desenhar.
-            std::cout << "\033[" << ptr[i]->get_y() << ";" << ptr[i]->get_x() << "H";
-
-            // C. Desenha (Imprime "o" ou "A" onde o cursor estiver)
-            ptr[i]->desenhar();
         }
+
+        DisplayRefresh(ptr, size);
 
         // Força o output a aparecer
         std::cout << std::flush;
